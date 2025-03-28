@@ -310,7 +310,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// Set up router
 	router := gin.Default()
-
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
 	// API routes
 	router.POST("/credential/register", authHandler.saveCredentials)
 	router.POST("/send-email", authHandler.sendEmailHandler)

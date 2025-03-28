@@ -15,8 +15,6 @@
 .vscode/
 
 # Archivos de Go mod
-go.sum
-go.mod
 
 # Archivos de compilación generados por Go
 *.out

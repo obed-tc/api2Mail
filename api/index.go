@@ -951,7 +951,7 @@ curl -X POST \
                 <h4><i class="fas fa-check-circle"></i> Respuesta Exitosa</h4>
                 <pre><code>{
     "message": "Te recomendamos guardar bien el token",
-    "token": "847894880a4abe4fce8e5e6d6deef4011b90bf6058788aa57fe8ca967a264fad"
+    "token": "*********************************************fe8ca967a264fad"
 }</code></pre>
             </div>
             

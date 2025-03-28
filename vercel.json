@@ -1,9 +1,11 @@
 {
-  "version": 2,
-  "routes": [
-      {
-          "src": "/api/(.*)",
-          "dest": "/api/index.go"
-      }
+  "github": {
+    "silent": true
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.go"
+    }
   ]
 }

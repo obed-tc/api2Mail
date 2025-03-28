@@ -1,0 +1,34 @@
+# Binaries
+/bin/
+/obj/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Dependencias
+/vendor/
+
+# Archivos de configuración específicos de IDEs
+.idea/
+.vscode/
+
+# Archivos de Go mod
+go.sum
+go.mod
+
+# Archivos de compilación generados por Go
+*.out
+*.test
+
+# Archivos temporales
+*.tmp
+*.log
+*.swp
+
+# Otros archivos de sistema
+.DS_Store
+Thumbs.db
+.env
+.text

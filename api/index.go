@@ -309,6 +309,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set up router
+	gin.SetMode(gin.ReleaseMode)
+
 	router := gin.Default()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())

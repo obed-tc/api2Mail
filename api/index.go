@@ -68,7 +68,7 @@ func (es *EmailService) send(from, password, to, subject, htmlBody string) error
 func (es *EmailService) sendWelcomeEmail(email, password, token string) error {
 	subject := "¡Bienvenido a MailApi! 🎉"
 	htmlBody := fmt.Sprintf(
-		"<html><body><h1>¡Hola! 👋</h1>"+
+		"<html><body><h1>¡Hola ! 👋</h1>"+
 			"<p>Este es un correo de prueba desde <strong>MailApi</strong> 📧</p>"+
 			"<p>Si recibes este mensaje, ¡felicitaciones! El correo es válido ✅.</p>"+
 			"<p>Por favor, guarda bien el token que se te ha generado, ya que lo necesitarás para realizar solicitudes autenticadas.<br> El token es: <strong>%s</strong> 🗝️</p>"+
@@ -77,8 +77,8 @@ func (es *EmailService) sendWelcomeEmail(email, password, token string) error {
 			"</body></html>", token)
 
 	if err := es.send(email, password, email, subject, htmlBody); err != nil {
-		log.Println("Error enviando el correo de prueba:", err)
-		return fmt.Errorf("Credenciales incorrectas")
+		log.Println("Error enviando el correo de prueba para verificacion:", err)
+		return fmt.Errorf("Credenciales incorrectas ")
 	}
 
 	return nil

@@ -297,6 +297,77 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Correo electrónico enviado exitosamente"})
 }
+func (ah *AuthHandler) serveIndexPage(c *gin.Context) {
+	htmlContent := `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailAPI - Servicio de Envío de Correos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .features {
+            margin-top: 20px;
+        }
+        .feature {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bienvenido a MailAPI 📧</h1>
+        
+        <div class="features">
+            <div class="feature">
+                <h2>Registro de Credenciales</h2>
+                <p>Endpoint: <code>/credential/register</code></p>
+                <p>Registra tus credenciales de correo electrónico de manera segura.</p>
+            </div>
+            
+            <div class="feature">
+                <h2>Envío de Correos</h2>
+                <p>Endpoint: <code>/send-email</code></p>
+                <p>Envía correos electrónicos utilizando tus credenciales registradas.</p>
+            </div>
+        </div>
+
+        <div class="feature">
+            <h3>Instrucciones</h3>
+            <ol>
+                <li>Registra tus credenciales usando el endpoint <code>/credential/register</code></li>
+                <li>Guarda el token generado</li>
+                <li>Utiliza el token en el encabezado Authorization para enviar correos</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
+`
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, htmlContent)
+}
 
 // Modificación del handler para Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -323,6 +394,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// Rutas
 	router.POST("/credential/register", authHandler.saveCredentials)
 	router.POST("/send-email", authHandler.sendEmailHandler)
+	router.GET("/", authHandler.serveIndexPage)
 
 	// Manejar solicitud
 	router.ServeHTTP(w, r)

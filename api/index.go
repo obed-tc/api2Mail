@@ -16,7 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	"github.com/joho/godotenv"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -131,9 +130,6 @@ func (cs *CryptoService) decrypt(ciphertext []byte, key []byte) ([]byte, error) 
 type RedisService struct{}
 
 func (rs *RedisService) init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error cargando el archivo .env: %v", err)
-	}
 
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {

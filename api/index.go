@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -298,7 +297,128 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Correo electrónico enviado exitosamente"})
 }
+func (ah *AuthHandler) serveIndexPage(c *gin.Context) {
+	htmlContent := `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailAPI - Servicio de Envío de Correos</title>
+    <style>
+        /* Estilo global */
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #E0E0E0;
+        }
 
+        /* Contenedor principal */
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 30px;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Títulos */
+        h1, h2, h3 {
+            color: #FF5722;
+            text-align: center;
+        }
+
+        /* Títulos secundarios */
+        h2 {
+            margin-top: 20px;
+        }
+
+        /* Sección de características */
+        .features {
+            margin-top: 30px;
+        }
+
+        .feature {
+            background-color: #333;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .feature p, .feature code {
+            color: #E0E0E0;
+        }
+
+        .feature code {
+            background-color: #272727;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        /* Lista de instrucciones */
+        ol {
+            padding-left: 20px;
+            color: #C0C0C0;
+        }
+
+        ol li {
+            margin-bottom: 10px;
+        }
+
+        /* Fondo oscuro para todo el documento */
+        .background-dark {
+            background-color: #121212;
+            color: #E0E0E0;
+        }
+
+        /* Ajustes del contenedor y márgenes */
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+    </style>
+</head>
+<body class="background-dark">
+    <div class="container content-wrapper">
+        <h1>Bienvenido a MailAPI 📧</h1>
+        
+        <div class="features">
+            <div class="feature">
+                <h2>Registro de Credenciales</h2>
+                <p>Endpoint: <code>/credential/register</code></p>
+                <p>Registra tus credenciales de correo electrónico de manera segura y confiable.</p>
+            </div>
+            
+            <div class="feature">
+                <h2>Envío de Correos</h2>
+                <p>Endpoint: <code>/send-email</code></p>
+                <p>Envía correos electrónicos utilizando las credenciales previamente registradas.</p>
+            </div>
+        </div>
+
+        <div class="feature">
+            <h3>Instrucciones</h3>
+            <ol>
+                <li>Registra tus credenciales usando el endpoint <code>/credential/register</code></li>
+                <li>Guarda el token generado para el envío de correos.</li>
+                <li>Utiliza el token en el encabezado Authorization al hacer peticiones para enviar correos.</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
+
+`
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, htmlContent)
+}
 
 // Modificación del handler para Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -325,12 +445,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// Rutas
 	router.POST("/credential/register", authHandler.saveCredentials)
 	router.POST("/send-email", authHandler.sendEmailHandler)
-	router.Static("/static", "./static")
-
-	// Ruta raíz que sirve index.html
-	router.GET("/", func(c *gin.Context) {
-		c.File(filepath.Join("./static", "index.html"))
-	})
+	router.GET("/", authHandler.serveIndexPage)
 
 	// Manejar solicitud
 	router.ServeHTTP(w, r)

@@ -129,8 +129,7 @@ func (cs *CryptoService) decrypt(ciphertext []byte, key []byte) ([]byte, error) 
 // Redis Service
 type RedisService struct{}
 
-func (rs *RedisService) init() {
-
+func (rs *RedisService) init() *redis.Client {
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
 		log.Fatal("REDIS_URL no está establecido en las variables de entorno")
@@ -141,19 +140,21 @@ func (rs *RedisService) init() {
 		log.Fatalf("Error al parsear la URL de Redis: %v", err)
 	}
 
-	client = redis.NewClient(opt)
+	// Inicializar cliente Redis y devolverlo
+	return redis.NewClient(opt)
 }
 
-func (rs *RedisService) saveObject(key string, obj interface{}) error {
+func (rs *RedisService) saveObject(client *redis.Client, key string, obj interface{}) error {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("error al serializar el objeto: %v", err)
 	}
 
+	// Usar cliente Redis pasado como parámetro
 	return client.Set(ctx, key, data, 0).Err()
 }
 
-func (rs *RedisService) getObject(key string, obj interface{}) error {
+func (rs *RedisService) getObject(client *redis.Client, key string, obj interface{}) error {
 	data, err := client.Get(ctx, key).Result()
 	if err != nil {
 		return fmt.Errorf("error al obtener el valor de Redis: %v", err)
@@ -166,6 +167,7 @@ type AuthHandler struct {
 	emailService  *EmailService
 	cryptoService *CryptoService
 	redisService  *RedisService
+	client        *redis.Client
 }
 
 func (ah *AuthHandler) saveCredentials(c *gin.Context) {
@@ -175,18 +177,18 @@ func (ah *AuthHandler) saveCredentials(c *gin.Context) {
 		return
 	}
 
-	// Generate token from password hash
+	// Generar token a partir de hash de la contraseña
 	data := []byte(newCredential.Password)
 	hash := sha3.Sum256(data)
 	token := fmt.Sprintf("%x", hash[:])
 
-	// send test email
+	// Enviar correo de prueba
 	if err := ah.emailService.sendWelcomeEmail(newCredential.Email, newCredential.Password, token); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// encrypt credentials
+	// Encriptar credenciales
 	encryptedPassword, err := ah.cryptoService.encrypt([]byte(newCredential.Password), hash[:])
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al cifrar la contraseña"})
@@ -199,13 +201,13 @@ func (ah *AuthHandler) saveCredentials(c *gin.Context) {
 		return
 	}
 
-	// Save to Redis
+	// Guardar en Redis
 	newInfoData := EncryptedInfo{
 		Key:   fmt.Sprintf("%x", encryptedPassword),
 		Value: fmt.Sprintf("%x", encryptedEmail),
 	}
 
-	if err := ah.redisService.saveObject(token, newInfoData); err != nil {
+	if err := ah.redisService.saveObject(ah.client, token, newInfoData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -217,7 +219,7 @@ func (ah *AuthHandler) saveCredentials(c *gin.Context) {
 }
 
 func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
-	// Validate Authorization header
+	// Validar el encabezado de autorización
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
@@ -237,21 +239,21 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 		return
 	}
 
-	// Parse request
+	// Parsear la solicitud
 	var request EmailRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error al leer el cuerpo de la solicitud"})
 		return
 	}
 
-	// Get encrypted credentials from Redis
+	// Obtener credenciales encriptadas de Redis
 	var dataCredential EncryptedInfo
-	if err := ah.redisService.getObject(token, &dataCredential); err != nil {
+	if err := ah.redisService.getObject(ah.client, token, &dataCredential); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// decrypt password
+	// Desencriptar contraseña
 	encryptedPasswordBytes, err := hex.DecodeString(dataCredential.Key)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error procesando credenciales"})
@@ -264,7 +266,7 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 		return
 	}
 
-	// decrypt email
+	// Desencriptar email
 	encryptedEmailBytes, err := hex.DecodeString(dataCredential.Value)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error procesando credenciales"})
@@ -277,7 +279,7 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 		return
 	}
 
-	// send email
+	// Enviar correo
 	if err := ah.emailService.send(
 		string(decryptedEmail),
 		string(decryptedPassword),
@@ -295,7 +297,7 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// Initialize services
 	redisService := &RedisService{}
-	redisService.init()
+	client := redisService.init()
 	defer client.Close()
 
 	emailService := &EmailService{}
@@ -306,6 +308,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		emailService:  emailService,
 		cryptoService: cryptoService,
 		redisService:  redisService,
+		client:        client,
+
 	}
 
 	// Set up router

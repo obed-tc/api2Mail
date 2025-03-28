@@ -44,9 +44,29 @@ type EncryptedInfo struct {
 
 // Global variables
 var (
-	ctx    = context.Background()
-	client *redis.Client
+	ctx = context.Background()
+	redisClient *redis.Client
 )
+
+// Inicialización global de Redis
+func initRedis() *redis.Client {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		log.Fatal("REDIS_URL no está establecido en las variables de entorno")
+	}
+
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		log.Fatalf("Error al parsear la URL de Redis: %v", err)
+	}
+
+	return redis.NewClient(opt)
+}
+
+// Inicialización una vez al cargar el módulo
+func init() {
+	redisClient = initRedis()
+}
 
 // Email Service
 type EmailService struct{}
@@ -129,28 +149,12 @@ func (cs *CryptoService) decrypt(ciphertext []byte, key []byte) ([]byte, error) 
 // Redis Service
 type RedisService struct{}
 
-func (rs *RedisService) init() *redis.Client {
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		log.Fatal("REDIS_URL no está establecido en las variables de entorno")
-	}
-
-	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		log.Fatalf("Error al parsear la URL de Redis: %v", err)
-	}
-
-	// Inicializar cliente Redis y devolverlo
-	return redis.NewClient(opt)
-}
-
 func (rs *RedisService) saveObject(client *redis.Client, key string, obj interface{}) error {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("error al serializar el objeto: %v", err)
 	}
 
-	// Usar cliente Redis pasado como parámetro
 	return client.Set(ctx, key, data, 0).Err()
 }
 
@@ -294,42 +298,32 @@ func (ah *AuthHandler) sendEmailHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Correo electrónico enviado exitosamente"})
 }
 
+// Modificación del handler para Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// Initialize services
-	redisService := &RedisService{}
-	client := redisService.init()
-	defer client.Close()
+	// Configurar Gin en modo de producción
+	gin.SetMode(gin.ReleaseMode)
 
+	// Crear router
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	// Servicios
 	emailService := &EmailService{}
 	cryptoService := &CryptoService{}
+	redisService := &RedisService{}
 
-	// Create handler with dependencies
+	// Handler de autenticación
 	authHandler := &AuthHandler{
 		emailService:  emailService,
 		cryptoService: cryptoService,
 		redisService:  redisService,
-		client:        client,
-
+		client:        redisClient,
 	}
 
-	// Set up router
-	gin.SetMode(gin.ReleaseMode)
-
-	router := gin.Default()
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
-	// API routes
+	// Rutas
 	router.POST("/credential/register", authHandler.saveCredentials)
 	router.POST("/send-email", authHandler.sendEmailHandler)
 
-	// Static files
-	router.NoRoute(func(c *gin.Context) {
-		http.ServeFile(c.Writer, c.Request, "./static/index.html")
-	})
-
-	// Start server
-	log.Println("Servidor iniciado en el puerto 8080...")
-	if err := router.Run(":8080"); err != nil {
-		log.Fatalf("Error al iniciar el servidor: %v", err)
-	}
+	// Manejar solicitud
+	router.ServeHTTP(w, r)
 }
